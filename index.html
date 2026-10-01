@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>בודק eSIM Go</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #687386;
+      --border: #dce2ea;
+      --accent: #2f6fed;
+      --ok: #16794a;
+      --bad: #b42318;
+      --warn: #9a6700;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      width: min(1180px, calc(100% - 28px));
+      margin: 28px auto 60px;
+    }
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 40px); }
+    h2 { margin-top: 0; }
+    .sub { color: var(--muted); margin-bottom: 22px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      margin: 14px 0;
+      box-shadow: 0 6px 22px rgba(15, 23, 42, .05);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .span-12 { grid-column: span 12; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .span-3 { grid-column: span 3; }
+    @media (max-width: 820px) {
+      .span-6, .span-4, .span-3 { grid-column: span 12; }
+    }
+    label { display: block; font-weight: 700; margin-bottom: 6px; }
+    input, select, button, textarea {
+      width: 100%;
+      font: inherit;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+    }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      font-weight: 800;
+    }
+    button.secondary {
+      background: #eef3ff;
+      color: #234a9f;
+      border: 1px solid #cfdcff;
+    }
+    button.ghost {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .row-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .row-actions button { width: auto; min-width: 130px; }
+    .notice {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 10px 0;
+      background: #fff7db;
+      color: #664d03;
+      border: 1px solid #f0d98a;
+    }
+    .notice.ok {
+      background: #ecfdf3;
+      color: var(--ok);
+      border-color: #abefc6;
+    }
+    .notice.bad {
+      background: #fff1f0;
+      color: var(--bad);
+      border-color: #f7b9b4;
+    }
+    .muted { color: var(--muted); }
+    .small { font-size: .92rem; }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .tab {
+      width: auto;
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .tab.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 900px;
+    }
+    th, td {
+      padding: 10px 9px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    code, .ltr {
+      direction: ltr;
+      unicode-bidi: embed;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 8px;
+      margin: 2px;
+      background: #eef3ff;
+      color: #234a9f;
+      font-size: .85rem;
+    }
+    .profile-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+    details { margin-top: 10px; }
+    pre {
+      direction: ltr;
+      text-align: left;
+      background: #111827;
+      color: #f9fafb;
+      padding: 12px;
+      border-radius: 10px;
+      overflow: auto;
+      max-height: 420px;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>בודק eSIM Go</h1>
+  <div class="sub">
+    דף סטטי שמתאים ל־GitHub Pages: בדיקת קטלוג לפני רכישה, הצגת <span class="ltr">profileName</span>,
+    ובדיקת תאימות של באנדל ל־ICCID קיים.
+  </div>
+
+  <div class="card">
+    <h2>מפתח ממשק תכנות</h2>
+    <div class="grid">
+      <div class="span-12">
+        <label for="apiKey">מפתח API</label>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="הדבק כאן את המפתח בכל פעם שאתה פותח את הדף">
+        <div class="small muted" style="margin-top:6px">
+          המפתח לא נשמר ב־Local Storage, לא נכתב לקובץ ולא נשלח לשום מקום מלבד eSIM Go.
+          אל תכניס את המפתח לקוד של GitHub.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notice">
+    <strong>חשוב:</strong> GitHub Pages הוא אתר סטטי. הדף מנסה לפנות ישירות ל־eSIM Go מהדפדפן.
+    אם eSIM Go חוסמת בקשות דפדפן באמצעות CORS, תראה הודעת "Failed to fetch".
+    במקרה כזה צריך שכבת שרת קטנה (למשל פונקציה ב־Vercel/Cloudflare) כדי לבצע את הבקשה בבטחה.
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="catalogue">קטלוג לפני רכישה</button>
+    <button class="tab" data-tab="bundle">פרטי באנדל</button>
+    <button class="tab" data-tab="compat">בדיקת תאימות ל־ICCID</button>
+    <button class="tab" data-tab="manual">טעינת JSON ידנית</button>
+  </div>
+
+  <section id="catalogue" class="panel active">
+    <div class="card">
+      <h2>קטלוג לפני רכישה</h2>
+      <p class="muted">
+        זה המסך שמאפשר לך לראות מראש לאיזה פרופיל תשתית שייך כל באנדל, עוד לפני שיש לך ICCID.
+      </p>
+      <div class="grid">
+        <div class="span-3">
+          <label for="country">מדינה (ISO)</label>
+          <input id="country" maxlength="2" placeholder="למשל US / FR / JP">
+        </div>
+        <div class="span-3">
+          <label for="region">אזור</label>
+          <input id="region" placeholder="למשל Europe">
+        </div>
+        <div class="span-3">
+          <label for="group">קבוצת באנדלים</label>
+          <input id="group" placeholder="אופציונלי">
+        </div>
+        <div class="span-3">
+          <label for="description">חיפוש בתיאור</label>
+          <input id="description" placeholder="למשל 10GB">
+        </div>
+        <div class="span-3">
+          <label for="page">עמוד</label>
+          <input id="page" type="number" min="1" value="1">
+        </div>
+        <div class="span-3">
+          <label for="perPage">תוצאות בעמוד</label>
+          <select id="perPage">
+            <option>20</option>
+            <option selected>50</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row-actions" style="margin-top:14px">
+        <button id="loadCatalogue">טען קטלוג</button>
+        <button id="exportCsv" class="secondary" disabled>ייצא CSV</button>
+        <button id="clearCatalogue" class="ghost">נקה</button>
+      </div>
+
+      <div id="catalogueStatus"></div>
+    </div>
+
+    <div id="profileSummary" class="card" style="display:none">
+      <h2>סיכום לפי פרופיל תשתית</h2>
+      <div id="profileSummaryGrid" class="grid"></div>
+    </div>
+
+    <div id="catalogueResults" class="card" style="display:none">
+      <h2>תוצאות</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>שם באנדל</th>
+              <th>תיאור</th>
+              <th>פרופיל תשתית</th>
+              <th>מחיר API</th>
+              <th>נפח</th>
+              <th>תוקף</th>
+              <th>מדינות</th>
+              <th>קבוצות</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="catalogueBody"></tbody>
+        </table>
+      </div>
+      <details>
+        <summary>הצג JSON גולמי</summary>
+        <pre id="catalogueRaw"></pre>
+      </details>
+    </div>
+  </section>
+
+  <section id="bundle" class="panel">
+    <div class="card">
+      <h2>פרטי באנדל לפי שם</h2>
+      <div class="grid">
+        <div class="span-12">
+          <label for="bundleName">שם טכני של באנדל</label>
+          <input id="bundleName" class="ltr" placeholder="esim_10GB_30D_...">
+        </div>
+      </div>
+      <div class="row-actions" style="margin-top:14px">
+        <button id="loadBundle">בדוק באנדל</button>
+      </div>
+      <div id="bundleStatus"></div>
+      <div id="bundleOutput"></div>
+    </div>
+  </section>
+
+  <section id="compat" class="panel">
+    <div class="card">
+      <h2>בדיקת תאימות ל־ICCID קיים</h2>
+      <p class="muted">
+        משתמשים בזה רק אחרי שכבר קיים פרופיל אצל הלקוח. הבדיקה לא קונה דבר ולא משנה דבר.
+      </p>
+      <div class="grid">
+        <div class="span-6">
+          <label for="iccid">ICCID</label>
+          <input id="iccid" class="ltr" inputmode="numeric" placeholder="8944...">
+        </div>
+        <div class="span-6">
+          <label for="compatBundle">שם הבאנדל</label>
+          <input id="compatBundle" class="ltr" placeholder="esim_10GB_30D_...">
+        </div>
+      </div>
+      <div class="row-actions" style="margin-top:14px">
+        <button id="checkCompat">בדוק תאימות</button>
+      </div>
+      <div id="compatStatus"></div>
+    </div>
+  </section>
+
+  <section id="manual" class="panel">
+    <div class="card">
+      <h2>טעינת JSON ידנית</h2>
+      <p class="muted">
+        אם הדפדפן לא מצליח לפנות ישירות ל־API בגלל CORS, אפשר להריץ את הבקשה במקום אחר,
+        להדביק כאן את תגובת הקטלוג, ועדיין להשתמש בטבלה ובניתוח הפרופילים.
+      </p>
+      <label for="manualJson">JSON מהקטלוג</label>
+      <textarea id="manualJson" rows="12" class="ltr" placeholder='[{"name":"...","profileName":"Profile 1", ...}]'></textarea>
+      <div class="row-actions" style="margin-top:14px">
+        <button id="parseManual">טען JSON</button>
+      </div>
+      <div id="manualStatus"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const API_BASE = 'https://api.esim-go.com/v2.5';
+  let currentCatalogue = [];
+  let currentRaw = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  function apiKey() {
+    return $('apiKey').value.trim();
+  }
+
+  function requireKey(statusEl) {
+    if (!apiKey()) {
+      showStatus(statusEl, 'צריך להדביק קודם את מפתח ה־API של eSIM Go.', 'bad');
+      return false;
+    }
+    return true;
+  }
+
+  function showStatus(target, message, type='') {
+    const el = typeof target === 'string' ? $(target) : target;
+    el.innerHTML = `<div class="notice ${type}">${escapeHtml(message)}</div>`;
+  }
+
+  function clearStatus(target) {
+    const el = typeof target === 'string' ? $(target) : target;
+    el.innerHTML = '';
+  }
+
+  async function apiFetch(path) {
+    const response = await fetch(API_BASE + path, {
+      method: 'GET',
+      headers: {
+        'X-API-Key': apiKey(),
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store'
+    });
+
+    const text = await response.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; }
+    catch { data = text; }
+
+    if (!response.ok) {
+      const msg = typeof data === 'object' && data?.message
+        ? data.message
+        : `${response.status} ${response.statusText}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function normalizeCatalogue(data) {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.bundles)) return data.bundles;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
+  }
+
+  function formatDataAmount(item) {
+    const mb = Number(item?.dataAmount);
+    if (!Number.isFinite(mb)) {
+      const a = Array.isArray(item?.allowances)
+        ? item.allowances.find(x => String(x.type).toUpperCase() === 'DATA')
+        : null;
+      if (a && Number.isFinite(Number(a.amount))) {
+        const amount = Number(a.amount);
+        const unit = a.unit || '';
+        return `${amount} ${unit}`;
+      }
+      return item?.unlimited ? 'ללא הגבלה' : '—';
+    }
+    if (mb >= 1000) return `${(mb/1000).toFixed(mb % 1000 ? 1 : 0)} GB`;
+    return `${mb} MB`;
+  }
+
+  function countriesText(item) {
+    const list = item?.countries || item?.roamingEnabled || [];
+    if (!Array.isArray(list)) return '—';
+    return list.map(x => typeof x === 'string' ? x : (x.iso || x.name || '')).filter(Boolean).join(', ') || '—';
+  }
+
+  function groupsText(item) {
+    if (!Array.isArray(item?.groups)) return '—';
+    return item.groups.join(', ') || '—';
+  }
+
+  function renderCatalogue(items, raw) {
+    currentCatalogue = items;
+    currentRaw = raw;
+
+    $('catalogueResults').style.display = 'block';
+    $('profileSummary').style.display = 'block';
+    $('exportCsv').disabled = items.length === 0;
+    $('catalogueRaw').textContent = JSON.stringify(raw, null, 2);
+
+    const body = $('catalogueBody');
+    body.innerHTML = '';
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="ltr">${escapeHtml(item.name || '—')}</td>
+        <td>${escapeHtml(item.description || '—')}</td>
+        <td><strong>${escapeHtml(item.profileName || item.profile || 'לא הוחזר')}</strong></td>
+        <td class="ltr">${escapeHtml(item.price ?? '—')}</td>
+        <td>${escapeHtml(formatDataAmount(item))}</td>
+        <td>${escapeHtml(item.duration != null ? item.duration + ' ימים' : '—')}</td>
+        <td>${escapeHtml(countriesText(item))}</td>
+        <td>${escapeHtml(groupsText(item))}</td>
+        <td><button class="secondary details-btn" data-name="${escapeAttr(item.name || '')}">פרטים</button></td>
+      `;
+      body.appendChild(tr);
+    });
+
+    body.querySelectorAll('.details-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $('bundleName').value = btn.dataset.name;
+        document.querySelector('[data-tab="bundle"]').click();
+        $('loadBundle').click();
+      });
+    });
+
+    renderProfileSummary(items);
+  }
+
+  function renderProfileSummary(items) {
+    const map = new Map();
+    for (const item of items) {
+      const profile = item.profileName || item.profile || 'ללא שם פרופיל';
+      if (!map.has(profile)) map.set(profile, []);
+      map.get(profile).push(item);
+    }
+
+    const grid = $('profileSummaryGrid');
+    grid.innerHTML = '';
+
+    [...map.entries()]
+      .sort((a,b) => b[1].length - a[1].length)
+      .forEach(([profile, arr]) => {
+        const prices = arr.map(x => Number(x.price)).filter(Number.isFinite);
+        const countries = new Set();
+        arr.forEach(x => {
+          (x.countries || []).forEach(c => countries.add(typeof c === 'string' ? c : (c.iso || c.name || '')));
+        });
+        const div = document.createElement('div');
+        div.className = 'span-4 profile-card';
+        div.innerHTML = `
+          <div style="font-size:1.1rem;font-weight:800">${escapeHtml(profile)}</div>
+          <div>באנדלים בעמוד: <strong>${arr.length}</strong></div>
+          <div>מדינות שמופיעות בעמוד: <strong>${[...countries].filter(Boolean).length}</strong></div>
+          <div>מחיר נמוך בעמוד: <strong class="ltr">${prices.length ? Math.min(...prices) : '—'}</strong></div>
+        `;
+        grid.appendChild(div);
+      });
+  }
+
+  $('loadCatalogue').addEventListener('click', async () => {
+    if (!requireKey('catalogueStatus')) return;
+    showStatus('catalogueStatus', 'טוען את הקטלוג...', '');
+
+    const params = new URLSearchParams();
+    params.set('page', $('page').value || '1');
+    params.set('perPage', $('perPage').value || '50');
+
+    const c = $('country').value.trim().toUpperCase();
+    const region = $('region').value.trim();
+    const group = $('group').value.trim();
+    const desc = $('description').value.trim();
+
+    if (c) params.set('countries', c);
+    if (region) params.set('region', region);
+    if (group) params.set('group', group);
+    if (desc) params.set('description', desc);
+
+    try {
+      const data = await apiFetch('/catalogue?' + params.toString());
+      const items = normalizeCatalogue(data);
+      renderCatalogue(items, data);
+      showStatus('catalogueStatus', `נטענו ${items.length} באנדלים.`, 'ok');
+    } catch (err) {
+      const msg = String(err?.message || err);
+      if (/failed to fetch/i.test(msg)) {
+        showStatus('catalogueStatus',
+          'הדפדפן לא הצליח לפנות ל־eSIM Go. ייתכן שזו חסימת CORS. אפשר להשתמש בלשונית "טעינת JSON ידנית", או להוסיף שכבת שרת קטנה.',
+          'bad');
+      } else {
+        showStatus('catalogueStatus', 'שגיאה: ' + msg, 'bad');
+      }
+    }
+  });
+
+  $('clearCatalogue').addEventListener('click', () => {
+    currentCatalogue = [];
+    currentRaw = null;
+    $('catalogueBody').innerHTML = '';
+    $('catalogueRaw').textContent = '';
+    $('catalogueResults').style.display = 'none';
+    $('profileSummary').style.display = 'none';
+    $('exportCsv').disabled = true;
+    clearStatus('catalogueStatus');
+  });
+
+  $('loadBundle').addEventListener('click', async () => {
+    if (!requireKey('bundleStatus')) return;
+    const name = $('bundleName').value.trim();
+    if (!name) {
+      showStatus('bundleStatus', 'צריך להזין שם טכני של באנדל.', 'bad');
+      return;
+    }
+    showStatus('bundleStatus', 'בודק את הבאנדל...', '');
+    $('bundleOutput').innerHTML = '';
+
+    try {
+      const data = await apiFetch('/catalogue/bundle/' + encodeURIComponent(name));
+      showStatus('bundleStatus', 'הבאנדל נמצא.', 'ok');
+
+      const countries = Array.isArray(data?.countries)
+        ? data.countries.map(x => `${x?.country?.name || x?.name || x?.country?.iso || x?.iso || ''}`).filter(Boolean)
+        : [];
+
+      $('bundleOutput').innerHTML = `
+        <div class="card" style="margin-top:12px">
+          <div><strong>שם:</strong> <span class="ltr">${escapeHtml(data?.name || name)}</span></div>
+          <div><strong>תיאור:</strong> ${escapeHtml(data?.description || '—')}</div>
+          <div><strong>פרופיל תשתית:</strong> ${escapeHtml(data?.profileName || data?.profile || 'לא הוחזר')}</div>
+          <div><strong>מחיר:</strong> <span class="ltr">${escapeHtml(data?.price ?? '—')}</span></div>
+          <div><strong>נפח:</strong> ${escapeHtml(formatDataAmount(data))}</div>
+          <div><strong>תוקף:</strong> ${escapeHtml(data?.duration != null ? data.duration + ' ימים' : '—')}</div>
+          <div><strong>מדינות:</strong> ${escapeHtml(countries.join(', ') || countriesText(data))}</div>
+          <details>
+            <summary>JSON גולמי</summary>
+            <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+          </details>
+        </div>
+      `;
+    } catch (err) {
+      showStatus('bundleStatus', 'שגיאה: ' + String(err?.message || err), 'bad');
+    }
+  });
+
+  $('checkCompat').addEventListener('click', async () => {
+    if (!requireKey('compatStatus')) return;
+    const iccid = $('iccid').value.trim();
+    const bundle = $('compatBundle').value.trim();
+
+    if (!iccid || !bundle) {
+      showStatus('compatStatus', 'צריך להזין גם ICCID וגם שם באנדל.', 'bad');
+      return;
+    }
+
+    showStatus('compatStatus', 'בודק תאימות...', '');
+    try {
+      const data = await apiFetch('/esims/' + encodeURIComponent(iccid) + '/compatible/' + encodeURIComponent(bundle));
+      if (data?.compatible === true) {
+        showStatus('compatStatus', 'כן — הבאנדל תואם ל־ICCID הזה.', 'ok');
+      } else if (data?.compatible === false) {
+        showStatus('compatStatus', 'לא — הבאנדל אינו תואם ל־ICCID הזה.', 'bad');
+      } else {
+        showStatus('compatStatus', 'התקבלה תשובה, אבל לא נמצא בה שדה תאימות ברור: ' + JSON.stringify(data), '');
+      }
+    } catch (err) {
+      showStatus('compatStatus', 'שגיאה: ' + String(err?.message || err), 'bad');
+    }
+  });
+
+  $('parseManual').addEventListener('click', () => {
+    try {
+      const data = JSON.parse($('manualJson').value);
+      const items = normalizeCatalogue(data);
+      if (!items.length) throw new Error('לא נמצאה רשימת באנדלים בתגובה.');
+      renderCatalogue(items, data);
+      showStatus('manualStatus', `נטענו ${items.length} באנדלים מה־JSON.`, 'ok');
+      document.querySelector('[data-tab="catalogue"]').click();
+    } catch (err) {
+      showStatus('manualStatus', 'JSON לא תקין: ' + String(err?.message || err), 'bad');
+    }
+  });
+
+  $('exportCsv').addEventListener('click', () => {
+    if (!currentCatalogue.length) return;
+
+    const rows = [
+      ['bundleName','description','profileName','price','data','durationDays','countries','groups']
+    ];
+
+    currentCatalogue.forEach(x => rows.push([
+      x.name || '',
+      x.description || '',
+      x.profileName || x.profile || '',
+      x.price ?? '',
+      formatDataAmount(x),
+      x.duration ?? '',
+      countriesText(x),
+      groupsText(x)
+    ]));
+
+    const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob(["\ufeff" + csv], {type: 'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'esim-go-catalogue.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  function csvEscape(v) {
+    const s = String(v ?? '');
+    return '"' + s.replaceAll('"', '""') + '"';
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
+  }
+</script>
+</body>
+</html>
